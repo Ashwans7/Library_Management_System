@@ -7,8 +7,11 @@ const app = express()
 const connectToDatabase =  require('./Database')
 const Book = require('./model/bookModel')
 // const {bookName,authorName,bookPrice,isbnNumber,publishedAt} = req.body
-      
+    
     app.use(express.json())
+   const {multer,storage} = require("./middleware/multerConfig")
+   const upload = multer({storage : storage})
+
   
       connectToDatabase()
       
@@ -19,7 +22,7 @@ const Book = require('./model/bookModel')
         })
       })
 //create book
-      app.post("/Book",async (req,res)=>{
+      app.post("/book",upload.single("image"),async (req,res)=>{
         const {bookName,authorName,bookPrice,isbnNumber,publishedAt,publication} = req.body
         await Book.create({ 
           bookName,bookPrice,authorName,publishedAt,isbnNumber,publication })
