@@ -1,6 +1,7 @@
 
 const express = require('express')
 const app = express()
+const fs = require('fs')
 
 
 //Book Management System
@@ -10,6 +11,7 @@ const Book = require('./model/bookModel')
     
     app.use(express.json())
    const {multer,storage} = require("./middleware/multerConfig")
+const { error } = require('console')
    const upload = multer({storage : storage})
 
   
@@ -21,17 +23,30 @@ const Book = require('./model/bookModel')
             message : "success"
         })
       })
-//create book
-      app.post("/book",upload.single("image"),async (req,res)=>{
-        const {bookName,authorName,bookPrice,isbnNumber,publishedAt,publication} = req.body
-        await Book.create({ 
-          bookName,bookPrice,authorName,publishedAt,isbnNumber,publication })
-          res.status(201).json({
-        message : "Book Created Successfully"
-      })
-        // console.log(bookName,authorName,bookPrice,isbnNumber,publishedAt)
+// create book
+app.post("/book",upload.single("image") ,async(req,res)=>{
 
-      })
+    let fileName ;
+    if(!req.file){
+        fileName = "https://cdn.vectorstock.com/i/preview-1x/77/30/default-avatar-profile-icon-grey-photo-placeholder-vector-17317730.jpg"
+    }else{
+       fileName = "http://localhost:3000/" + req.file.filename
+    }
+   const {bookName,bookPrice,isbnNumber,authorName,publishedAt,publication} = req.body
+   await Book.create({
+        bookName,
+        bookPrice,
+        isbnNumber,
+        authorName,
+        publishedAt,
+        publication,
+        imageUrl : fileName
+       })
+   res.status(201).json({
+    message : "Book Created Successfully"
+   })
+})
+
 
 
       //all read
@@ -69,20 +84,42 @@ app.delete("/book/:id",async (req,res)=>{
 
 
 //Update Operation
-app.patch("/book/:id",async(req,res)=>{
+app.patch("/book/:id",upload.single("image"),async(req,res)=>{
     const id = req.params.id // kun book ma update garne id 
     const {bookName,bookPrice,authorName,publishedAt,publication,isbnNumber} = req.body
+    const oldDatas = await Book.findById(id)
+    let fileName ;
+    if(req.file){
+      const oldImagePath = oldDatas.imageUrl
+      console.log(oldImagePath)
+ 
+      const localHostUrlLength = "http://localhost:3000/".length
+      const newOldImagePath = oldImagePath.slice(localHostUrlLength)
+      console.log(newOldImagePath)
+      //delete file/folder
+      fs.unlink('storage/${newOldImagePath}',(err)=>{
+        if(err){
+          console.log(err)
+        } else (err)=> {
+          console.log("File deleted successfully")
+        }
+        
+      })
+      fileName = "http://localhost:3000/" + req.file.filename
+    }
     await Book.findByIdAndUpdate(id,{
-      bookName, bookPrice, authorName , publication , publishedAt , isbnNumber
+      bookName, bookPrice, authorName , publication , publishedAt , isbnNumber, imageUrl : fileName
     })
+
+
     res.status(200).json({
       message : "Book Updated Successfully"
     })
 })
 
-      
+app.use(express.static("./storage "))
 
       app.listen(3000,()=>{
-  //console.log("Nodejs server has started at port 3000")
+  console.log("Nodejs server has started at port 3000")
 }
 )
